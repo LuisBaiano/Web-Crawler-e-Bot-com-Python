@@ -1,3 +1,5 @@
+#Arquivo teste para verificar as requisições das informações de maneira individual
+
 import requests
 import re
 from bs4 import BeautifulSoup
