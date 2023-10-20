@@ -1,23 +1,26 @@
-import requests
-from bs4 import BeautifulSoup
+#Bibliotecas importadas que são utilizadas no projeto
+import os
 import time
+import requests
 import schedule
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from datetime import datetime
 from database import Database
-from dotenv import load_dotenv
-import os
+from bot import BOT
 
-# Sites a serem utilizados:
+# Sites que foram utilizados:
 # 1 - Kabum - https://www.kabum.com.br/eletrodomesticos?page_number=1&page_size=20&facet_filters=&sort=most_searched
 # 2 - Amazon - https://www.amazon.com.br//s?k=eletrodomesticos&qid=1697052859&ref=sr_pg_2&page=1
 # 3 - Magazine Luiza - https://www.magazineluiza.com.br/eletrodomesticos/l/ed/?page=2
 
 class Crawler:
 
-    #Função responsável por inicializar o banco de dados
+    #Função responsável por inicializar o banco de dados e o bot
     def __init__(self):
         load_dotenv()
         self.db = Database()
+        self.bot = BOT()
 
     #  Função responsável por realizar uma solicitação HTTP para a URL especificada, após isso, a resposta da página é analisada com BeautifulSoup.
     # Se ocorrer algum erro, é definido um tempo de espera de 3 segundos para realizar outra solicitação.   
@@ -56,7 +59,7 @@ class Crawler:
         else:
             for product in products:
                 title = product.find('span', {'class': 'nameCard'}).text
-                image = product.find('img', {'class': 'imageCard'})
+                image = product.find('img', {'class': 'imageCard'}).attrs['src']
                 link = os.getenv('KABUM') + str(product.find('a', {'class': 'productLink'}).attrs['href'])
                 second_request = self.request_data(link)
                 price = second_request.find("h4", {"class": "finalPrice"}).text
@@ -69,9 +72,12 @@ class Crawler:
                     'link': link,
                     'date': datetime.now()
                 }
+                response = self.db.insert(data_kabum)
+                if response is not None:
+                    if "old_price" in response:
+                        response["old_price"] = 0
+                    self.bot.content(response)
 
-                self.db.insert(data_kabum)
-                print(data_kabum)
 
     #Função para extrair os dados do site Amazon.
     def extract_from_amazon(self, page: int = 1, retry: bool = False) -> None:
@@ -98,13 +104,17 @@ class Crawler:
 
                 data_amazon = {
                     'title': title,
-                    'image': image,
+                    'image': None,
                     'price': price,
                     'link': link,
                     'date': datetime.now()
                 }
-                self.db.insert(data_amazon)
-                print(data_amazon)
+                response = self.db.insert(data_amazon)
+                if response is not None:
+                    if "old_price" in response:
+                        response["old_price"] = 0
+                    self.bot.content(response)
+
 
     #Função para extrair os dados do site Magazine Luiza.
     def extract_from_magalu(self, page: int = 1, retry: bool = False) -> None:
@@ -131,12 +141,15 @@ class Crawler:
                     'link': link,
                     'date': datetime.now()
                 }
-                self.db.insert(data_magalu)
-                print(data_magalu)
+                response = self.db.insert(data_magalu)
+                if response is not None:
+                    if "old_price" in response:
+                        response["old_price"] = 0
+                    self.bot.content(response)
 
     #Função responsável por chamar os metodos de extração para cada um dos sites e por realizar um laço for que recebe os dados dos produtos
     #que é executada conforme o número de paginas defindas para a extração, indo de 1 ao valor de 'num_pages'.
-    def execute(self, num_pages: int = 2):
+    def execute(self, num_pages: int = 1):
         for page in range(1, num_pages):
             self.extract_from_kabum(page)
             self.extract_from_amazon(page)
@@ -146,7 +159,7 @@ if __name__ == "__main__":
     #Inicialização do Crawler
     crawler = Crawler()
     #Execução da extração de dados dos sites
-    crawler.execute(2)
+    crawler.execute(1)
 
     #Função responsável por fazer a extração periódica dos dados
     def do_request():
@@ -154,7 +167,7 @@ if __name__ == "__main__":
         crawler.execute()
 
     #Re-executando a função 'do_request' a cada 'x' minutos para evitar sobrecarga de solicitações
-    schedule.every(2).minutes.do(do_request)
+    schedule.every(5).minutes.do(do_request)
 
     #Laço while utilizado para garantir que as requisições agendadas sejam executadas
     while True:
