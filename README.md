@@ -4,7 +4,9 @@ Projeto de Atividade Complementar da Disciplina EAD: fundamentos e praticas - EC
 
 ## Sumário
 
-
+* [Pré-requisitos](###pré-requisitos)
+* [Bibliotecas Utilizadas](###bibliotecas-utilizadas)
+* [Informações para execução do Crawler](###informações-para-execução-do-crawler)
 
 ### Pré-requisitos
 
@@ -13,7 +15,7 @@ Para a devida construção e execução do projeto, é necessária a instalaçã
 * Python 3.10+
 * pip
 
-### Bibliotecas utilizadas
+### Bibliotecas Utilizadas
 
 * beautifulsoup4
 * datetime
@@ -33,7 +35,7 @@ Para a devida construção e execução do projeto, é necessária a instalaçã
   pip install -r requirements.txt
   ```
 
-### Informações para execução do Crawler:
+### Informações para execução do Crawler
 
 1. Instale os **pré-requisitos**
 2. Clone o repositório
